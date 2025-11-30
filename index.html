@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Code Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .upload-section {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 50px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        
+        .upload-section.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .upload-section h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .upload-section p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        #folderInput {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .file-list {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .file-list h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .file-item {
+            background: #f8f9ff;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .file-name {
+            color: #333;
+            font-family: monospace;
+        }
+        
+        .file-size {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .analysis-section {
+            margin-top: 40px;
+            display: none;
+        }
+        
+        .analysis-card {
+            background: #f8f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        
+        .analysis-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .analysis-card h3::before {
+            content: "▶";
+            margin-right: 10px;
+            font-size: 0.8em;
+        }
+        
+        .analysis-content {
+            color: #333;
+            line-height: 1.8;
+        }
+        
+        .tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 0.9em;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .metric {
+            display: inline-block;
+            margin: 10px 15px 10px 0;
+        }
+        
+        .metric-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .metric-value {
+            color: #667eea;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐍 Python Code Analyzer</h1>
+            <p>Upload your Python project for comprehensive analysis</p>
+        </div>
+        
+        <div class="content">
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-icon">📁</div>
+                <h2>Upload Python Project Folder</h2>
+                <p>Drag and drop your folder here or click to browse</p>
+                <input type="file" id="folderInput" webkitdirectory directory multiple>
+                <button class="btn" onclick="document.getElementById('folderInput').click()">
+                    Select Folder
+                </button>
+            </div>
+            
+            <div class="file-list" id="fileList">
+                <h3>📄 Uploaded Files (<span id="fileCount">0</span>)</h3>
+                <div id="fileItems"></div>
+                <button class="btn" onclick="analyzeCode()" id="analyzeBtn">
+                    🔍 Analyze Code
+                </button>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyzing your Python code...</p>
+            </div>
+            
+            <div class="analysis-section" id="analysisSection">
+                <h2 style="color: #667eea; margin-bottom: 20px;">📊 Analysis Results</h2>
+                
+                <div class="analysis-card">
+                    <h3>📈 Project Overview</h3>
+                    <div class="analysis-content" id="overview">
+                        <div class="metric">
+                            <div class="metric-label">Total Files</div>
+                            <div class="metric-value" id="totalFiles">0</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Python Files</div>
+                            <div class="metric-value" id="pythonFiles">0</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Total Lines</div>
+                            <div class="metric-value" id="totalLines">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analysis-card">
+                    <h3>🤖 LLM & AI Libraries Detected</h3>
+                    <div class="analysis-content" id="llmLibraries"></div>
+                </div>
+                
+                <div class="analysis-card">
+                    <h3>🔧 Frameworks & Libraries</h3>
+                    <div class="analysis-content" id="frameworks"></div>
+                </div>
+                
+                <div class="analysis-card warning">
+                    <h3>⚠️ Environment Variables Analysis</h3>
+                    <div class="analysis-content" id="envVars"></div>
+                </div>
+                
+                <div class="analysis-card">
+                    <h3>🏗️ Architecture & Patterns</h3>
+                    <div class="analysis-content" id="architecture"></div>
+                </div>
+                
+                <div class="analysis-card success">
+                    <h3>✅ Best Practices</h3>
+                    <div class="analysis-content" id="bestPractices"></div>
+                </div>
+                
+                <div class="analysis-card">
+                    <h3>💡 Recommendations</h3>
+                    <div class="analysis-content" id="recommendations"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let uploadedFiles = [];
+        
+        const uploadSection = document.getElementById('uploadSection');
+        const folderInput = document.getElementById('folderInput');
+        const fileList = document.getElementById('fileList');
+        const fileItems = document.getElementById('fileItems');
+        const loading = document.getElementById('loading');
+        const analysisSection = document.getElementById('analysisSection');
+        
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+        
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+        
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        uploadSection.addEventListener('click', () => {
+            folderInput.click();
+        });
+        
+        folderInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        function handleFiles(files) {
+            uploadedFiles = Array.from(files).filter(file => 
+                file.name.endsWith('.py') || 
+                file.name === 'requirements.txt' || 
+                file.name === 'setup.py' ||
+                file.name === 'pyproject.toml' ||
+                file.name === '.env' ||
+                file.name === 'config.py'
+            );
+            
+            if (uploadedFiles.length === 0) {
+                alert('No Python files found in the selected folder!');
+                return;
+            }
+            
+            displayFiles();
+        }
+        
+        function displayFiles() {
+            fileItems.innerHTML = '';
+            document.getElementById('fileCount').textContent = uploadedFiles.length;
+            
+            uploadedFiles.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <span class="file-name">${file.webkitRelativePath || file.name}</span>
+                    <span class="file-size">${(file.size / 1024).toFixed(2)} KB</span>
+                `;
+                fileItems.appendChild(fileItem);
+            });
+            
+            fileList.style.display = 'block';
+        }
+        
+        async function analyzeCode() {
+            loading.style.display = 'block';
+            analysisSection.style.display = 'none';
+            document.getElementById('analyzeBtn').disabled = true;
+            
+            const fileContents = await Promise.all(
+                uploadedFiles.map(file => readFileContent(file))
+            );
+            
+            const analysis = performAnalysis(fileContents);
+            displayAnalysis(analysis);
+            
+            loading.style.display = 'none';
+            analysisSection.style.display = 'block';
+            document.getElementById('analyzeBtn').disabled = false;
+        }
+        
+        function readFileContent(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    resolve({
+                        name: file.name,
+                        path: file.webkitRelativePath || file.name,
+                        content: e.target.result
+                    });
+                };
+                reader.readAsText(file);
+            });
+        }
+        
+        function performAnalysis(files) {
+            const analysis = {
+                totalFiles: files.length,
+                pythonFiles: files.filter(f => f.name.endsWith('.py')).length,
+                totalLines: 0,
+                llmLibraries: new Set(),
+                frameworks: new Set(),
+                envVars: {
+                    hardcoded: [],
+                    fromEnv: [],
+                    inEnvFile: false
+                },
+                architecture: {
+                    patterns: new Set()
+                },
+                bestPractices: [],
+                issues: []
+            };
+            
+            const llmPatterns = {
+                'OpenAI': /import openai|from openai/i,
+                'Anthropic (Claude)': /import anthropic|from anthropic/i,
+                'LangChain': /import langchain|from langchain/i,
+                'Hugging Face': /import transformers|from transformers|import huggingface/i,
+                'Google AI (Gemini)': /import google\.generativeai|from google\.generativeai/i,
+                'Cohere': /import cohere|from cohere/i,
+                'LlamaIndex': /import llama_index|from llama_index/i,
+                'Replicate': /import replicate|from replicate/i,
+                'Together AI': /import together|from together/i,
+                'Groq': /import groq|from groq/i
+            };
+            
+            const frameworkPatterns = {
+                'FastAPI': /from fastapi|import fastapi/i,
+                'Flask': /from flask|import flask/i,
+                'Django': /from django|import django/i,
+                'Streamlit': /import streamlit/i,
+                'Gradio': /import gradio/i,
+                'PyTorch': /import torch/i,
+                'TensorFlow': /import tensorflow/i,
+                'NumPy': /import numpy/i,
+                'Pandas': /import pandas/i,
+                'SQLAlchemy': /from sqlalchemy|import sqlalchemy/i,
+                'Pydantic': /from pydantic|import pydantic/i,
+                'Requests': /import requests/i,
+                'AsyncIO': /import asyncio/i,
+                'Celery': /from celery|import celery/i
+            };
+            
+            files.forEach(file => {
+                const lines = file.content.split('\n');
+                analysis.totalLines += lines.length;
+                
+                Object.entries(llmPatterns).forEach(([name, pattern]) => {
+                    if (pattern.test(file.content)) {
+                        analysis.llmLibraries.add(name);
+                    }
+                });
+                
+                Object.entries(frameworkPatterns).forEach(([name, pattern]) => {
+                    if (pattern.test(file.content)) {
+                        analysis.frameworks.add(name);
+                    }
+                });
+                
+                const hardcodedApiKeys = file.content.match(/api[_-]?key\s*=\s*["'][^"']+["']/gi);
+                const hardcodedSecrets = file.content.match(/secret\s*=\s*["'][^"']+["']/gi);
+                const hardcodedTokens = file.content.match(/token\s*=\s*["'][^"']+["']/gi);
+                
+                if (hardcodedApiKeys || hardcodedSecrets || hardcodedTokens) {
+                    analysis.envVars.hardcoded.push({
+                        file: file.path,
+                        issues: [
+                            ...(hardcodedApiKeys || []),
+                            ...(hardcodedSecrets || []),
+                            ...(hardcodedTokens || [])
+                        ]
+                    });
+                }
+                
+                if (/os\.getenv|os\.environ|load_dotenv/.test(file.content)) {
+                    analysis.envVars.fromEnv.push(file.path);
+                }
+                
+                if (file.name === '.env') {
+                    analysis.envVars.inEnvFile = true;
+                }
+                
+                if (/class.*\(.*BaseModel.*\)/.test(file.content)) {
+                    analysis.architecture.patterns.add('Pydantic Models');
+                }
+                if (/async def/.test(file.content)) {
+                    analysis.architecture.patterns.add('Async/Await Pattern');
+                }
+                if (/@app\.route|@router\.|@api\./.test(file.content)) {
+                    analysis.architecture.patterns.add('REST API');
+                }
+                if (/class.*Service|class.*Repository|class.*Controller/.test(file.content)) {
+                    analysis.architecture.patterns.add('Service Layer Pattern');
+                }
+                if (/def __init__|class.*:/.test(file.content)) {
+                    analysis.architecture.patterns.add('Object-Oriented Programming');
+                }
+            });
+            
+            if (analysis.envVars.fromEnv.length > 0) {
+                analysis.bestPractices.push('✓ Uses environment variables properly');
+            }
+            if (analysis.architecture.patterns.has('Async/Await Pattern')) {
+                analysis.bestPractices.push('✓ Implements asynchronous programming');
+            }
+            if (files.some(f => f.name === 'requirements.txt')) {
+                analysis.bestPractices.push('✓ Has requirements.txt for dependencies');
+            }
+            
+            if (analysis.envVars.hardcoded.length > 0) {
+                analysis.issues.push('⚠️ Hardcoded credentials detected');
+            }
+            if (!files.some(f => f.name === 'requirements.txt')) {
+                analysis.issues.push('⚠️ Missing requirements.txt');
+            }
+            
+            return analysis;
+        }
+        
+        function displayAnalysis(analysis) {
+            document.getElementById('totalFiles').textContent = analysis.totalFiles;
+            document.getElementById('pythonFiles').textContent = analysis.pythonFiles;
+            document.getElementById('totalLines').textContent = analysis.totalLines.toLocaleString();
+            
+            const llmHtml = analysis.llmLibraries.size > 0
+                ? Array.from(analysis.llmLibraries).map(lib => `<span class="tag">${lib}</span>`).join('')
+                : '<p>No LLM libraries detected</p>';
+            document.getElementById('llmLibraries').innerHTML = llmHtml;
+            
+            const frameworksHtml = analysis.frameworks.size > 0
+                ? Array.from(analysis.frameworks).map(fw => `<span class="tag">${fw}</span>`).join('')
+                : '<p>No major frameworks detected</p>';
+            document.getElementById('frameworks').innerHTML = frameworksHtml;
+            
+            let envHtml = '';
+            if (analysis.envVars.hardcoded.length > 0) {
+                envHtml += '<p><strong>⚠️ Hardcoded Credentials Found:</strong></p>';
+                analysis.envVars.hardcoded.forEach(item => {
+                    envHtml += `<p style="color: #dc3545;">📄 ${item.file}</p>`;
+                });
+                envHtml += '<p><strong>Recommendation:</strong> Move these to environment variables!</p>';
+            } else {
+                envHtml += '<p style="color: #28a745;">✅ No hardcoded credentials detected</p>';
+            }
+            
+            if (analysis.envVars.fromEnv.length > 0) {
+                envHtml += `<p style="color: #28a745;">✅ ${analysis.envVars.fromEnv.length} file(s) properly use environment variables</p>`;
+            }
+            
+            if (analysis.envVars.inEnvFile) {
+                envHtml += '<p style="color: #28a745;">✅ .env file present</p>';
+            }
+            
+            document.getElementById('envVars').innerHTML = envHtml;
+            
+            const archHtml = analysis.architecture.patterns.size > 0
+                ? '<p><strong>Detected Patterns:</strong></p>' + 
+                  Array.from(analysis.architecture.patterns).map(p => `<span class="tag">${p}</span>`).join('')
+                : '<p>Basic procedural structure</p>';
+            document.getElementById('architecture').innerHTML = archHtml;
+            
+            const bpHtml = analysis.bestPractices.length > 0
+                ? analysis.bestPractices.map(bp => `<p>${bp}</p>`).join('')
+                : '<p>Consider implementing more best practices</p>';
+            document.getElementById('bestPractices').innerHTML = bpHtml;
+            
+            let recHtml = '<ul style="line-height: 2;">';
+            if (analysis.envVars.hardcoded.length > 0) {
+                recHtml += '<li>Move hardcoded credentials to environment variables</li>';
+            }
+            if (!analysis.envVars.inEnvFile) {
+                recHtml += '<li>Create a .env file for configuration</li>';
+            }
+            if (analysis.llmLibraries.size > 0) {
+                recHtml += '<li>Implement proper error handling for API calls</li>';
+                recHtml += '<li>Add rate limiting and retry logic</li>';
+            }
+            if (!analysis.architecture.patterns.has('Async/Await Pattern') && analysis.llmLibraries.size > 0) {
+                recHtml += '<li>Consider using async/await for better performance</li>';
+            }
+            recHtml += '<li>Add comprehensive logging</li>';
+            recHtml += '<li>Implement unit tests</li>';
+            recHtml += '</ul>';
+            document.getElementById('recommendations').innerHTML = recHtml;
+        }
+    </script>
+</body>
+</html>
